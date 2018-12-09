@@ -1,10 +1,13 @@
 import hashlib
+import random
 
-def BCHash( x ):
+# Hashing in hexadecimal
+def BCHash(x):
     #check that this hash is legit..
     y = int(hashlib.sha256(bytes(x, 'utf-8')).hexdigest(), 16)
     return hex(y)
     #return ''.join(format(ord(i), 'b') for i in y)
+
 
 class Block:
     def __init__(self, txs, prevHash, nonce, sol=None, score=None):
@@ -16,29 +19,30 @@ class Block:
 
     def __str__(self):
         return str(self.__dict__)
-        # return f"txs = {self.txs}, prevHash = {self.prevHash}, nonce = {self.nonce}"
 
 def createBlock(bC, txs):
-    pHash = BCHash( str(bC[-1]) )
+    pHash = BCHash(str(bC[-1]))
     return Block(txs, pHash, 0)
 
 def mine(block, difficulty):
     while(BCHash(str(block)) > difficulty):
-        block.nonce = block.nonce + 1
-        print("HI")
         print(block.nonce)
         print(BCHash(str(block)))
-    # return None
+        block.nonce = block.nonce + 1
 
 
 def mine_blocks():
-    time = 0
-    total_nonce = 0
-
+    #initialize blockchain as list
     blockChain = []
+
+    #initial difficulty
     difficulty = BCHash("difficulty")
+	#total number of hashes attempted before difficulty is ajusted
+    total_nonce = 0
+    #frequency at which difficulty is updated
     update_freq = 10
 
+    #genesis block
     genBlock = Block(0, 0, 0)
     blockChain.append(genBlock)
 
@@ -55,7 +59,10 @@ def mine_blocks():
         #mine(block, CAP_diff)
         #else mine(block, BTC_diff)
 
-        cc = createBlock( blockChain, 1 )
+        #treat transactions as a random number
+        trans = random.random()
+        cc = createBlock(blockChain, trans)
+
         mine(cc, difficulty)
         total_nonce += cc.nonce
         blockChain.append(cc)
