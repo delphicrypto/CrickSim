@@ -1,5 +1,6 @@
 import hashlib
 import random
+import time
 
 from mnist import NN_optimize
 from mnist import param_update 
@@ -22,9 +23,9 @@ class Block:
     def __str__(self):
         return str(self.__dict__)
 
-def createBlock(bC, txs):
+def createBlock(bC, txs, score = None):
     pHash = BCHash(str(bC[-1]))
-    return Block(txs, pHash, 1)
+    return Block(txs, pHash, 1, score = score)
 
 def mine(block, difficulty):
     while(BCHash(str(block)) > difficulty):
@@ -34,17 +35,43 @@ def mine(block, difficulty):
 
 def miningComp(numMiners, bC, difficulty):
     minerResults = []
-    nonceResults = []
+    timeResults = []
     for i in range(numMiners):
         #treat transaction as a random number
         trans = random.random()
         cc = createBlock(bC, trans)
+        start = time.time()
         mine(cc, difficulty)
+        stop = time.time() - start
         minerResults.append(cc)
-        nonceResults.append(cc.nonce)
+        timeResults.append(stop)
     # print(nonceResults)
-    print(nonceResults)
-    return minerResults[nonceResults.index(min(nonceResults))]
+    return min(timeResults), minerResults[timeResults.index(min(timeResults))]
+
+def solHash(bestSol):
+    opter = NN_optimize({'max_iter': 10}, param_update)
+    score, timeT = next(opter)
+    while(score < bestSol):
+      score, timeadd = next(opter) 
+      timeT += timeadd
+    return score, timeT
+
+#list of miner objects
+def solComp(numMiners, bC, CAPdifficulty, bestSol):
+    minerResults = []
+    timeResults = []
+    for i in range(numMiners):
+        score, timesol = solHash(bestSol)
+        trans = random.random()
+        cc = createBlock(bC, trans, score)
+        start = time.time()
+        mine(cc, CAPdifficulty)
+        stop = time.time() - start
+        timeResults.append(timesol+stop)
+        minerResults.append(cc)
+    return min(timeResults), minerResults[timeResults.index(min(timeResults))]
+
+
 
 def mine_blocks():
     #initialize blockchain as list
@@ -58,6 +85,8 @@ def mine_blocks():
     total_nonce = 0
     #frequency at which difficulty is updated
     update_freq = 100
+    #initial best solution 
+    bestSol = 0
 
     #genesis block
     genBlock = Block(0, 0, 0)
@@ -81,7 +110,9 @@ def mine_blocks():
         #else mine(block, BTC_diff)
 
         #treat transactions as a random number
-        winBlock = miningComp(numMiners, blockChain, difficulty)
+        #time, winBlock = miningComp(numMiners, blockChain, difficulty)
+        timeSol, winSolBlock = solComp(numMiners, blockChain, difficulty, bestSol) 
+        bestSol = winSolBlock.score
 
         #impkement multiple miners as a list where the smallest timestamp is
         #taken as 'winning miner'
@@ -108,5 +139,6 @@ if __name__ == '__main__':
     mine_blocks()
     if False:
         opter = NN_optimize({'max_iter': 10}, param_update)
+        score, time = next(opter)
         for _ in range(10):
             print(next(opter))
