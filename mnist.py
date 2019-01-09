@@ -41,17 +41,17 @@ def NN_optimize(params, param_update):
         print(new_params)
         start = time.time()
         model = NN_train(**new_params)
-        score = NN_check(model)
         t_train = time.time() - start
+        score = NN_check(model)
         params = new_params
         print(score)
         yield (score, t_train)
 
-if __name__ == "__main__":
-    def param_update(params):
-        params['max_iter'] += 100
-        return params
+def param_update(params):
+    params['max_iter'] += 100
+    return params
 
+if __name__ == "__main__":
     opter = NN_optimize({'max_iter': 10}, param_update)
     for _ in range(10):
         print(next(opter))

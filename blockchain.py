@@ -1,6 +1,9 @@
 import hashlib
 import random
 
+from mnist import NN_optimize
+from mnist import param_update 
+
 # Hashing in hexadecimal
 def BCHash(x):
     #check that this hash is legit..
@@ -21,7 +24,7 @@ class Block:
 
 def createBlock(bC, txs):
     pHash = BCHash(str(bC[-1]))
-    return Block(txs, pHash, 0)
+    return Block(txs, pHash, 1)
 
 def mine(block, difficulty):
     while(BCHash(str(block)) > difficulty):
@@ -40,12 +43,13 @@ def miningComp(numMiners, bC, difficulty):
         minerResults.append(cc)
         nonceResults.append(cc.nonce)
     # print(nonceResults)
+    print(nonceResults)
     return minerResults[nonceResults.index(min(nonceResults))]
 
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
-    R = 10 #number of nonces/block on average
+    R = 3 #number of nonces/block on average
     #number of nonce ~ time -> equivalent to 10min/block in BTC
 
     #initial difficulty
@@ -53,13 +57,15 @@ def mine_blocks():
 	#total number of hashes attempted before difficulty is ajusted
     total_nonce = 0
     #frequency at which difficulty is updated
-    update_freq = 10
+    update_freq = 100
 
     #genesis block
     genBlock = Block(0, 0, 0)
     blockChain.append(genBlock)
 
-    while len(blockChain) < 50:
+    numMiners = 10 
+
+    while len(blockChain) < 2 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -75,13 +81,12 @@ def mine_blocks():
         #else mine(block, BTC_diff)
 
         #treat transactions as a random number
-        numMiners = 1
         winBlock = miningComp(numMiners, blockChain, difficulty)
 
         #impkement multiple miners as a list where the smallest timestamp is
         #taken as 'winning miner'
         #loop over blocks
-        total_nonce += winBlock.nonce
+        total_nonce += winBlock.nonce 
         blockChain.append(winBlock)
     # print(int(difficulty, 16))
     # difficulty = int(int(difficulty, 16) / (total_nonce * 200))
@@ -101,5 +106,7 @@ def mine_blocks():
 if __name__ == '__main__':
     # BCHash(str(
     mine_blocks()
-
-
+    if False:
+        opter = NN_optimize({'max_iter': 10}, param_update)
+        for _ in range(10):
+            print(next(opter))
