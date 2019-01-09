@@ -8,7 +8,6 @@ def BCHash(x):
     return hex(y)
     #return ''.join(format(ord(i), 'b') for i in y)
 
-
 class Block:
     def __init__(self, txs, prevHash, nonce, sol=None, score=None):
         self.txs = txs
@@ -30,6 +29,17 @@ def mine(block, difficulty):
         print(BCHash(str(block)))
         block.nonce = block.nonce + 1
 
+def miningComp(numMiners, bC, difficulty):
+    minerResults = []
+    nonceResults = []
+    for i in xrange(numMiners-1):
+        #treat transaction as a random number
+        trans = random.random()
+        cc = createBlock(blockChain, trans)
+        mine(cc, difficulty)
+        minerResults.append(cc)
+        nonceResults.append(cc.nonce)
+    return minerResults.index(min(nonceResults))
 
 def mine_blocks():
     #initialize blockchain as list
@@ -51,7 +61,7 @@ def mine_blocks():
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
             BTC_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq * 2))
-            CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
+            #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
             print(f"difficulty update")
 
         #train NN
@@ -60,12 +70,14 @@ def mine_blocks():
         #else mine(block, BTC_diff)
 
         #treat transactions as a random number
-        trans = random.random()
-        cc = createBlock(blockChain, trans)
+        numMiners = 1
+        winBlock = miningComp(numMiners, blockchain)
 
-        mine(cc, difficulty)
-        total_nonce += cc.nonce
-        blockChain.append(cc)
+        #impkement multiple miners as a list where the smallest timestamp is
+        #taken as 'winning miner'
+        #loop over blocks
+        total_nonce += winBlock.nonce
+        blockChain.append(winBlock)
     # print(int(difficulty, 16))
     difficulty = int(int(difficulty, 16) / (total_nonce * 200))
     difficulty = hex(difficulty)
@@ -80,6 +92,7 @@ def mine_blocks():
         #others revert to state at tmin
 
     print(difficulty)
+
 if __name__ == '__main__':
     mine_blocks()
 
