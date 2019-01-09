@@ -66,7 +66,7 @@ def mine_blocks():
             T = R * update_freq
             difficulty = int(int(difficulty, 16) * (total_nonce ) / ( T ))
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
-            print(f"difficulty update: {BTC_difficulty}")
+            print(f"difficulty update: {difficulty}")
 
         #train NN
         # if score > prev_score
@@ -98,7 +98,7 @@ def mine_blocks():
     print(difficulty)
 
 if __name__ == '__main__':
-    BCHash(str(
+    # BCHash(str(
     mine_blocks()
 
 
