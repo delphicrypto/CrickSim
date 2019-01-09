@@ -58,12 +58,12 @@ def mine_blocks():
     blockChain.append(genBlock)
 
     while len(blockChain) < 50:
-        print(len(blockChain))
+        print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
             BTC_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq * 2))
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
-            print(f"difficulty update")
+            print(f"difficulty update: {BTC_difficulty}")
 
         #train NN
         # if score > prev_score
