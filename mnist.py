@@ -1,13 +1,15 @@
+import time
+
 from sklearn.datasets import load_digits
 from sklearn.neural_network import MLPClassifier
 
-def NN_train(hidden_layer_sizes=(50,), max_iter=10, alpha=1e-4):
+def NN_train(hidden_layer_sizes=(50,50), max_iter=10, alpha=1e-4):
     digits = load_digits()
     n_samples = len(digits.images)
     data = digits.images.reshape((n_samples, -1))
 
     mlp = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, max_iter=max_iter, alpha=alpha,
-                        solver='sgd', verbose=10, tol=1e-4, random_state=1,
+                        solver='adam', verbose=10, tol=1e-10,
                         learning_rate_init=.1)
 
     mlp.fit(data, digits.target)
@@ -26,25 +28,31 @@ def NN_optimize(params, param_update):
     Written as generator which yields the current score after one NN training.
 
     Arguments:
-     ``
+     `params`: dictionary of neural network parameters by keyword
+     `param_update`: function that takes param dictionary and returns new one for next iteration.
     """
+
     score = 0
-    max_iter = 1
     model = None
 
     # while score < current_best:
     while True:
         new_params = param_update(params)
+        print(new_params)
+        start = time.time()
         model = NN_train(**new_params)
         score = NN_check(model)
+        t_train = time.time() - start
         params = new_params
         print(score)
-        yield score
+        yield (score, t_train)
 
 if __name__ == "__main__":
     def param_update(params):
-        params['max_iter'] += 10
-        return params 
+        params['max_iter'] += 100
+        return params
 
-    NN_optimize({'max_iter': 10}, param_update)
+    opter = NN_optimize({'max_iter': 10}, param_update)
+    for _ in range(10):
+        print(next(opter))
     pass
