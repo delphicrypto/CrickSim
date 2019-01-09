@@ -45,6 +45,8 @@ def miningComp(numMiners, bC, difficulty):
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
+    R = 10 #number of nonces/block on average
+    #number of nonce ~ time -> equivalent to 10min/block in BTC
 
     #initial difficulty
     difficulty = BCHash("difficulty")
@@ -57,11 +59,12 @@ def mine_blocks():
     genBlock = Block(0, 0, 0)
     blockChain.append(genBlock)
 
-    while len(blockChain) < 50:
+    while len(blockChain) < 2 * update_freq:
         print(len(blockChain))
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
-            BTC_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq * 2))
+            T = R * update_freq
+            difficulty = int(int(difficulty, 16) * (total_nonce ) / ( T ))
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
             print(f"difficulty update")
 
@@ -95,6 +98,7 @@ def mine_blocks():
     print(difficulty)
 
 if __name__ == '__main__':
+    BCHash(str(
     mine_blocks()
 
 
