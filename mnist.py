@@ -20,20 +20,31 @@ def NN_check(model):
     return model.score(data, digits.target)
 
 
-def NN_optimize(current_best):
+def NN_optimize(params, param_update):
+    """
+    Try different parameters until `current_best` is beaten.
+    Written as generator which yields the current score after one NN training.
+
+    Arguments:
+     ``
+    """
     score = 0
-    size = 1
     max_iter = 1
     model = None
 
-    while score < current_best:
-        model = NN_train(max_iter=max_iter)
-        max_iter += 1
+    # while score < current_best:
+    while True:
+        new_params = param_update(params)
+        model = NN_train(**new_params)
         score = NN_check(model)
-    print(f"best score: {score}")
-    print(f"n_iter: {max_iter}")
-    return model
+        params = new_params
+        print(score)
+        yield score
 
 if __name__ == "__main__":
-    NN_optimize(0.2)
+    def param_update(params):
+        params['max_iter'] += 10
+        return params 
+
+    NN_optimize({'max_iter': 10}, param_update)
     pass

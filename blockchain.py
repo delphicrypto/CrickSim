@@ -32,14 +32,15 @@ def mine(block, difficulty):
 def miningComp(numMiners, bC, difficulty):
     minerResults = []
     nonceResults = []
-    for i in xrange(numMiners-1):
+    for i in range(numMiners):
         #treat transaction as a random number
         trans = random.random()
-        cc = createBlock(blockChain, trans)
+        cc = createBlock(bC, trans)
         mine(cc, difficulty)
         minerResults.append(cc)
         nonceResults.append(cc.nonce)
-    return minerResults.index(min(nonceResults))
+    print(nonceResults)
+    return minerResults[nonceResults.index(min(nonceResults))]
 
 def mine_blocks():
     #initialize blockchain as list
@@ -71,7 +72,7 @@ def mine_blocks():
 
         #treat transactions as a random number
         numMiners = 1
-        winBlock = miningComp(numMiners, blockchain)
+        winBlock = miningComp(numMiners, blockChain, difficulty)
 
         #impkement multiple miners as a list where the smallest timestamp is
         #taken as 'winning miner'
