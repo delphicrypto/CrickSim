@@ -14,7 +14,7 @@ class Block:
         self.prevHash = prevHash
         self.nonce = nonce
         self.solution = sol
-        self.score = score 
+        self.score = score
 
     def __str__(self):
         return str(self.__dict__)
@@ -25,8 +25,8 @@ def createBlock(bC, txs):
 
 def mine(block, difficulty):
     while(BCHash(str(block)) > difficulty):
-        print(block.nonce)
-        print(BCHash(str(block)))
+        # print(block.nonce)
+        # print(BCHash(str(block)))
         block.nonce = block.nonce + 1
 
 def miningComp(numMiners, bC, difficulty):
@@ -39,7 +39,7 @@ def miningComp(numMiners, bC, difficulty):
         mine(cc, difficulty)
         minerResults.append(cc)
         nonceResults.append(cc.nonce)
-    print(nonceResults)
+    # print(nonceResults)
     return minerResults[nonceResults.index(min(nonceResults))]
 
 def mine_blocks():
@@ -64,9 +64,10 @@ def mine_blocks():
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
             T = R * update_freq
-            difficulty = int(int(difficulty, 16) * (total_nonce ) / ( T ))
+            difficulty = hex(int(int(difficulty, 16) * (total_nonce ) / ( T )))
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
             print(f"difficulty update: {difficulty}")
+            total_nonce = 0
 
         #train NN
         # if score > prev_score
@@ -83,8 +84,8 @@ def mine_blocks():
         total_nonce += winBlock.nonce
         blockChain.append(winBlock)
     # print(int(difficulty, 16))
-    difficulty = int(int(difficulty, 16) / (total_nonce * 200))
-    difficulty = hex(difficulty)
+    # difficulty = int(int(difficulty, 16) / (total_nonce * 200))
+    # difficulty = hex(difficulty)
     pass
 
     # 'pseudo' threading for solving problem + classical hashing
