@@ -9,7 +9,7 @@ def NN_train(hidden_layer_sizes=(50,50), max_iter=10, alpha=1e-4):
     data = digits.images.reshape((n_samples, -1))
 
     mlp = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, max_iter=max_iter, alpha=alpha,
-                        solver='adam', verbose=10, tol=1e-10,
+                        solver='adam', verbose=0, tol=1e-10,
                         learning_rate_init=.1)
 
     mlp.fit(data, digits.target)
@@ -38,13 +38,11 @@ def NN_optimize(params, param_update):
     # while score < current_best:
     while True:
         new_params = param_update(params)
-        print(new_params)
         start = time.time()
         model = NN_train(**new_params)
         t_train = time.time() - start
         score = NN_check(model)
         params = new_params
-        print(score)
         yield (score, t_train)
 
 def param_update(params):
