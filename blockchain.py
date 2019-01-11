@@ -9,7 +9,7 @@ from mnist import param_update
 def BCHash(x):
     #check that this hash is legit..
     y = int(hashlib.sha256(bytes(x, 'utf-8')).hexdigest(), 16)
-    return hex(y)
+    return y/(10**50)
     #return ''.join(format(ord(i), 'b') for i in y)
 
 class Miner:
@@ -91,10 +91,11 @@ def mine_blocks():
 
     #initial difficulty
     difficulty = BCHash("difficulty")
+    PAC_difficulty = difficulty * 10
 	#total number of hashes attempted before difficulty is ajusted
     total_nonce = 0
     #frequency at which difficulty is updated
-    update_freq = 10
+    update_freq = 5
     #wanted average time to mine blocks before update
     T = update_freq
     #solution advantagee - eta
@@ -109,9 +110,10 @@ def mine_blocks():
     genBlock = Block(0, 0, 0)
     blockChain.append(genBlock)
 
-    num_miners = 10
+    num_miners = 2
+    num_sol_miners = 2
 
-    sol_miners = [Miner() for _ in range(num_miners)]
+    sol_miners = [Miner() for _ in range(num_sol_miners)]
 
     while len(blockChain) < 6 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
@@ -123,28 +125,30 @@ def mine_blocks():
                     b+=1/update_freq
             T_star = sum(tslist) + sum(tblist)
             ts_star = sum(tslist)/(len(tslist) + 0.1)
-            tb_star = sum(tblist)/len(tblist)
+            tb_star = sum(tblist)/(len(tblist) +0.1)
             eta_star = ts_star/tb_star
             tblist = [] 
             tslist = []
+            print("UPDATING DIFFICULTY")
             print(f"T_star: {T_star}")
             print(f"tb_star: {tb_star}")
             print(f"ts_star: {ts_star}")
             print(f"eta_star: {eta_star}")
             print(f"b: {b}")
-            difficulty = hex(int(int(difficulty, 16) *(
-                (b+(1-b)*eta)/(b+(1-b)*eta_star))*T_star/T)
-            )
+            difficulty2 = difficulty *(
+                (b+(1-b)*eta)/(b+(1-b)*eta_star)*T_star/T)
+            
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
-            print(f"difficulty update: {difficulty}")
+            PAC_difficulty = 1/(eta/difficulty2-eta_star/difficulty+1/PAC_difficulty)
+
+            difficulty = difficulty2
+            print(f"BTC difficulty update: {difficulty}")
+            print(f"reduced difficulty update: {difficulty}")
             total_nonce = 0
 
         #treat transactions as a random number
         print("DOING BTC RACE")
         time_btc, winBlock = miningComp(num_miners, blockChain, difficulty)
-
-        #for now just set PAC difficulty to regular times constant factor 
-        PAC_difficulty = hex(int(int(difficulty, 16) *  1000000))
 
         print(f"DOING PAC RACE, best score: {bestSol}")
         time_pac, winSolBlock = solComp(sol_miners, blockChain, PAC_difficulty, bestSol)
