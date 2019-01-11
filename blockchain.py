@@ -95,8 +95,15 @@ def mine_blocks():
     total_nonce = 0
     #frequency at which difficulty is updated
     update_freq = 10
+    #wanted average time to mine blocks before update
+    T = update_freq
+    #solution advantagee - eta
+    eta = 1/5
     #initial best solution
     bestSol = 0
+    #time lists
+    tblist = []
+    tslist = []
 
     #genesis block
     genBlock = Block(0, 0, 0)
@@ -110,8 +117,24 @@ def mine_blocks():
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
-            T = R * update_freq
-            difficulty = hex(int(int(difficulty, 16) * (total_nonce ) / ( T )))
+            b=0
+            for block in blockChain[-update_freq:]:
+                if block.score == None:
+                    b+=1/update_freq
+            T_star = sum(tslist) + sum(tblist)
+            ts_star = sum(tslist)/(len(tslist) + 0.1)
+            tb_star = sum(tblist)/len(tblist)
+            eta_star = ts_star/tb_star
+            tblist = [] 
+            tslist = []
+            print(f"T_star: {T_star}")
+            print(f"tb_star: {tb_star}")
+            print(f"ts_star: {ts_star}")
+            print(f"eta_star: {eta_star}")
+            print(f"b: {b}")
+            difficulty = hex(int(int(difficulty, 16) *(
+                (b+(1-b)*eta)/(b+(1-b)*eta_star))*T_star/T)
+            )
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
             print(f"difficulty update: {difficulty}")
             total_nonce = 0
@@ -129,10 +152,12 @@ def mine_blocks():
         print(f"btc: {time_btc}, pac: {time_pac}")
         if time_btc < time_pac:
             blockChain.append(winBlock)
+            tblist.append(time_btc)
         else:
             blockChain.append(winSolBlock)
             print("PAC WINS")
             bestSol = winSolBlock.score
+            tslist.append(time_pac)
 
         for b in blockChain:
             print(b)
