@@ -94,7 +94,7 @@ def mine_blocks():
 	#total number of hashes attempted before difficulty is ajusted
     total_nonce = 0
     #frequency at which difficulty is updated
-    update_freq = 100
+    update_freq = 10
     #initial best solution
     bestSol = 0
 
@@ -106,7 +106,7 @@ def mine_blocks():
 
     sol_miners = [Miner() for _ in range(num_miners)]
 
-    while len(blockChain) < 2 * update_freq:
+    while len(blockChain) < 6 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -121,7 +121,7 @@ def mine_blocks():
         time_btc, winBlock = miningComp(num_miners, blockChain, difficulty)
 
         #for now just set PAC difficulty to regular times constant factor 
-        PAC_difficulty = hex(int(int(difficulty, 16) /  1000000))
+        PAC_difficulty = hex(int(int(difficulty, 16) *  1000000))
 
         print(f"DOING PAC RACE, best score: {bestSol}")
         time_pac, winSolBlock = solComp(sol_miners, blockChain, PAC_difficulty, bestSol)
@@ -132,8 +132,8 @@ def mine_blocks():
         else:
             blockChain.append(winSolBlock)
             print("PAC WINS")
+            bestSol = winSolBlock.score
 
-        bestSol = winSolBlock.score
         for b in blockChain:
             print(b)
 
