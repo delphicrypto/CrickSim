@@ -88,6 +88,7 @@ def get_times(tslist, tblist):
     tb_star = sum(tblist) / (len(tblist) + 0.1)
     return Tstar, ts_star, tb_star
 
+#updating the number of miners
 def get_num_miners(total, ts_star, tb_star):
     num_BTC_miners = int(total * tb_star / (ts_star + tb_star))
     num_PAC_miners = int(total * ts_star / (ts_star + tb_star))
@@ -124,6 +125,7 @@ def mine_blocks():
     genBlock = Block(0, 0, 0)
     blockChain.append(genBlock)
 
+    #initial number of miners
     num_miners = 2
     num_sol_miners = 2
     total = num_miners + num_sol_miners
