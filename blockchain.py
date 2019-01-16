@@ -15,6 +15,7 @@ def BCHash(x):
 class Miner:
     def __init__(self, best_score=0):
         self.best_score = best_score
+
 class Block:
     def __init__(self, txs, prevHash, nonce, sol=None, score=None):
         self.txs = txs
@@ -81,7 +82,11 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol):
 
     return min(timeResults), minerResults[timeResults.index(min(timeResults))]
 
-
+def get_times(tslist, tblist):
+    Tstar = sum(tslist) + sum(tblist)
+    ts_star = sum(tslist) / (len(tslist) + 0.1)
+    tb_star = sum(tblist) / (len(tblist) + 0.1)
+    return Tstar, ts_star, tb_star
 
 def mine_blocks():
     #initialize blockchain as list
@@ -93,7 +98,7 @@ def mine_blocks():
     total_nonce = 0
     #frequency at which difficulty is updated
     update_freq = 5
-    #wanted average time to mine blocks before update
+    #wanted average time to mine blocks before update in seconds
     T = update_freq
     #solution advantagee - eta
     eta = 1/5
@@ -120,9 +125,7 @@ def mine_blocks():
             for block in blockChain[-update_freq:]:
                 if block.score == None:
                     b+=1/update_freq
-            T_star = sum(tslist) + sum(tblist)
-            ts_star = sum(tslist)/(len(tslist) + 0.1)
-            tb_star = sum(tblist)/(len(tblist) + 0.1)
+            T_star, ts_star, tb_star = get_times(tslist, tblist)
             eta_star = ts_star/tb_star
             tblist = []
             tslist = []
