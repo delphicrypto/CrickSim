@@ -88,6 +88,13 @@ def get_times(tslist, tblist):
     tb_star = sum(tblist) / (len(tblist) + 0.1)
     return Tstar, ts_star, tb_star
 
+def get_num_miners(total, ts_star, tb_star):
+    num_BTC_miners = int(total * tb_star / (ts_star + tb_star))
+    num_PAC_miners = int(total * ts_star / (ts_star + tb_star))
+    print(f"Number of PAC miners: {num_PAC_miners}")
+    print(f"Number of BTC miners: {num_BTC_miners}")
+    return num_PAC_miners, num_BTC_miners
+
 def update_BTC_diff(diff, b, eta, eta_star, T, T_star):
     return diff *(
         (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
@@ -119,6 +126,7 @@ def mine_blocks():
 
     num_miners = 2
     num_sol_miners = 2
+    total = num_miners + num_sol_miners
 
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
@@ -154,6 +162,7 @@ def mine_blocks():
             print(f"reduced difficulty update: {PAC_difficulty}")
 
             total_nonce = 0
+            num_miners, num_sol_miners = get_num_miners(total, ts_star, tb_star)
 
         #treat transactions as a random number
         print("DOING BTC RACE")
