@@ -86,9 +86,6 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol):
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
-    R = 3 #number of nonces/block on average
-    #number of nonce ~ time -> equivalent to 10min/block in BTC
-
     #initial difficulty
     difficulty = BCHash("difficulty")
     PAC_difficulty = difficulty * 10
