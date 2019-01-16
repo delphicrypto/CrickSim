@@ -9,7 +9,7 @@ from mnist import param_update
 def BCHash(x):
     #check that this hash is legit..
     y = int(hashlib.sha256(bytes(x, 'utf-8')).hexdigest(), 16)
-    return y/(10**50)
+    return y
     #return ''.join(format(ord(i), 'b') for i in y)
 
 class Miner:
@@ -88,6 +88,11 @@ def get_times(tslist, tblist):
     tb_star = sum(tblist) / (len(tblist) + 0.1)
     return Tstar, ts_star, tb_star
 
+def update_BTC_diff(diff, b, eta, eta_star, T, T_star):
+    return diff *(
+        (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
+            )
+
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
@@ -135,9 +140,9 @@ def mine_blocks():
             print(f"ts_star: {ts_star}")
             print(f"eta_star: {eta_star}")
             print(f"b: {b}")
-            difficulty2 = difficulty *(
-                (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
-                )
+
+            difficulty2 = update_BTC_diff(difficulty, b, eta, eta_star, T, T_star)
+
             # difficulty2 = difficulty + (10**20) 
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
             PAC_difficulty = 1/( (eta/difficulty2) - (eta_star/difficulty) + (1/PAC_difficulty) )
