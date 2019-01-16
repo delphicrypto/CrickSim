@@ -10,8 +10,7 @@ def NN_train(hidden_layer_sizes=(50,50), max_iter=10, alpha=1e-4):
 
     mlp = MLPClassifier(hidden_layer_sizes=hidden_layer_sizes, max_iter=max_iter, alpha=alpha,
                         solver='adam', verbose=0, tol=1e-10,
-                        learning_rate_init=.1)
-
+                        learning_rate_init=.1) 
     mlp.fit(data, digits.target)
     return mlp
 
@@ -46,7 +45,7 @@ def NN_optimize(params, param_update):
         yield (score, t_train)
 
 def param_update(params):
-    params['max_iter'] += 100
+    params['max_iter'] += 10
     return params
 
 if __name__ == "__main__":

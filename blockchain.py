@@ -122,9 +122,9 @@ def mine_blocks():
                     b+=1/update_freq
             T_star = sum(tslist) + sum(tblist)
             ts_star = sum(tslist)/(len(tslist) + 0.1)
-            tb_star = sum(tblist)/(len(tblist) +0.1)
+            tb_star = sum(tblist)/(len(tblist) + 0.1)
             eta_star = ts_star/tb_star
-            tblist = [] 
+            tblist = []
             tslist = []
             print("UPDATING DIFFICULTY")
             print(f"T_star: {T_star}")
@@ -133,14 +133,18 @@ def mine_blocks():
             print(f"eta_star: {eta_star}")
             print(f"b: {b}")
             difficulty2 = difficulty *(
-                (b+(1-b)*eta)/(b+(1-b)*eta_star)*T_star/T)
-            
+                (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
+                )
+            # difficulty2 = difficulty + (10**20) 
             #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
-            PAC_difficulty = 1/(eta/difficulty2-eta_star/difficulty+1/PAC_difficulty)
+            PAC_difficulty = 1/( (eta/difficulty2) - (eta_star/difficulty) + (1/PAC_difficulty) )
+            # PAC_difficulty = PAC_difficulty - (10**20) 
 
             difficulty = difficulty2
+
             print(f"BTC difficulty update: {difficulty}")
-            print(f"reduced difficulty update: {difficulty}")
+            print(f"reduced difficulty update: {PAC_difficulty}")
+
             total_nonce = 0
 
         #treat transactions as a random number
@@ -160,7 +164,9 @@ def mine_blocks():
             bestSol = winSolBlock.score
             tslist.append(time_pac)
 
-        for b in blockChain:
+        for i,b in enumerate(blockChain):
+            if not i % update_freq:
+                print("="*30)
             print(b)
 
         #loop over blocks
