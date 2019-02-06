@@ -1,9 +1,10 @@
+import pickle
 import time
 
 from sklearn.datasets import load_digits
 from sklearn.neural_network import MLPClassifier
 
-def NN_train(hidden_layer_sizes=(50,50), max_iter=10, alpha=1e-4):
+def NN_train(hidden_layer_sizes=(50,50), max_iter=1000, alpha=1e-4):
     digits = load_digits()
     n_samples = len(digits.images)
     data = digits.images.reshape((n_samples, -1))
@@ -38,6 +39,7 @@ def NN_optimize(params, param_update):
     while True:
         new_params = param_update(params)
         start = time.time()
+        print(new_params)
         model = NN_train(**new_params)
         t_train = time.time() - start
         score = NN_check(model)
@@ -45,11 +47,21 @@ def NN_optimize(params, param_update):
         yield (score, t_train)
 
 def param_update(params):
-    params['max_iter'] += 10
+    # params['alpha'] = params['alpha'] / 2
     return params
 
 if __name__ == "__main__":
-    opter = NN_optimize({'max_iter': 10}, param_update)
-    for _ in range(10):
-        print(next(opter))
+    num_miners = 3
+    times_list = []
+    for i in range(num_miners):
+        print(f"miner {i}")
+        miner_times = []
+        opter = NN_optimize({'alpha': 0.1}, param_update)
+        for _ in range(1000):
+            score, t = next(opter)
+            miner_times.append((score, t))
+            print(score)
+        times_list.append(miner_times)
+    print(times_list)
+    pickle.dump(times_list, open("miner_times_v1.pickle", "wb"))
     pass
