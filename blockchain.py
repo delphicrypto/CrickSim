@@ -156,6 +156,7 @@ def mine_blocks():
     blockChain = []
     #initial difficulty
     difficulty_BTC = BCHash("difficulty")
+    difficulty_BTC = 1e75
     #make it 10x easier to mine with solution initially
     difficulty_PAC = difficulty_BTC * 10
     #frequency at which difficulty is updated
@@ -181,7 +182,13 @@ def mine_blocks():
 
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
-    while len(blockChain) < 100 * update_freq:
+    data = {k: [] for k in 
+        ['eta_star', 'T_star', 'score', 'sol', 'db', 'dr']}
+
+    eta_star = 0
+    T_star = 0
+
+    while len(blockChain) < 10 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -190,7 +197,8 @@ def mine_blocks():
                 if block.score == None:
                     b+=1/update_freq
             T_star, ts_star, tb_star = get_times(tslist, tblist)
-            eta_star = ts_star/tb_star
+            #keep eta_star between 0 and 1
+            eta_star = min(ts_star/tb_star, 1)
             tblist = []
             tslist = []
             print("UPDATING DIFFICULTY")
@@ -201,13 +209,14 @@ def mine_blocks():
             print(f"b: {b}")
 
             difficulty_BTC_new = update_BTC_diff(difficulty_BTC, b, eta, eta_star, T, T_star)
-            difficulty_BTC_new = difficulty_scale(difficulty_BTC, difficulty_BTC_new)
+            difficulty_BTC_new = difficulty_scale(difficulty_BTC_new, difficulty_BTC)
+            print(f"BTC difficulty updated by factor: {difficulty_BTC_new/difficulty_BTC}")
 
-            # difficulty2 = difficulty + (10**20) 
             difficulty_PAC_new = 1/( (eta/difficulty_BTC_new) - (eta_star/difficulty_BTC) + (1/difficulty_PAC) )
-            # PAC_difficulty = PAC_difficulty - (10**20) 
-
-            difficulty_PAC = difficulty_scale(difficulty_PAC, difficulty_PAC_new)
+            print(f"PAC difficulty updated by factor: {difficulty_PAC_new/difficulty_PAC}")
+            assert difficulty_PAC_new >= 0
+            difficulty_PAC = difficulty_PAC_new
+            difficulty_BTC = difficulty_BTC_new
 
             print(f"BTC difficulty update: {difficulty_BTC}")
             print(f"reduced difficulty update: {difficulty_PAC}")
@@ -225,19 +234,29 @@ def mine_blocks():
         if time_btc < time_pac:
             blockChain.append(winBlock)
             tblist.append(time_btc)
-            print("BTC WINS")
+            data['sol'].append(0)
+            print(">>> BTC WINS")
         else:
             blockChain.append(winSolBlock)
-            print("PAC WINS")
+            print(">>> PAC WINS")
             bestSol = winSolBlock.score
             tslist.append(time_pac)
+            data['sol'].append(1)
 
         # for i,b in enumerate(blockChain):
             # if not i % update_freq:
                 # print("="*30)
             # print(b)
 
-    pass
+        #record stats
+        data['db'].append(difficulty_BTC)
+        data['dr'].append(difficulty_PAC)
+        data['eta_star'].append(eta_star)
+        data['T_star'].append(T_star)
+        data['score'].append(bestSol)
+
+    return data
 
 if __name__ == '__main__':
-    mine_blocks()
+    data = mine_blocks()
+    print(data)
