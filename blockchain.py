@@ -8,7 +8,7 @@ from mnist import param_update
 from clique import clique_solver
 
 n_nodes = 10000
-max_deg= 500
+max_deg= 5000
 
 print("building graph")
 graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
@@ -113,9 +113,16 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
 def get_times(tslist, tblist):
     Tstar = sum(tslist) + sum(tblist)
     #average solving time
-    ts_star = sum(tslist) / (len(tslist) + 0.1)
+    if len(tslist) == 0:
+        ts_star = sys.maxsize
+    else:
+        ts_star = sum(tslist) / (len(tslist) + 0.1)
+
     #average btc time
-    tb_star = sum(tblist) / (len(tblist) + 0.1)
+    if len(tblist) == 0:
+        tb_star = sys.maxsize
+    else:
+        tb_star = sum(tblist) / (len(tblist) + 0.1)
     return Tstar, ts_star, tb_star
 
 #updating the number of miners
@@ -126,21 +133,33 @@ def get_num_miners(total, ts_star, tb_star):
     print(f"Number of BTC miners: {num_BTC_miners}")
     return num_PAC_miners, num_BTC_miners
 
-def update_BTC_diff(diff, b, eta, eta_star, T, T_star):
-    return diff *(
+def update_BTC_diff(difficulty, b, eta, eta_star, T, T_star):
+    return difficulty *(
         (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
             )
+
+def difficulty_scale(new_diff, old_diff, min_factor=1/4, max_factor=4):
+    """
+        Make sure difficulty not changing too hard.
+
+    """
+    ratio = new_diff / old_diff
+    if ratio < min_factor:
+        return old_diff * min_factor
+    elif ratio > max_factor:
+        return old_diff * max_factor
+    else:
+        return new_diff
 
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
     #initial difficulty
-    difficulty = BCHash("difficulty")
-    PAC_difficulty = difficulty * 10
-	#total number of hashes attempted before difficulty is ajusted
-    total_nonce = 0
+    difficulty_BTC = BCHash("difficulty")
+    #make it 10x easier to mine with solution initially
+    difficulty_PAC = difficulty_BTC * 10
     #frequency at which difficulty is updated
-    update_freq = 5
+    update_freq = 20 
     #wanted average time to mine blocks before update in seconds
     T = update_freq
     #solution advantagee - eta
@@ -181,27 +200,26 @@ def mine_blocks():
             print(f"eta_star: {eta_star}")
             print(f"b: {b}")
 
-            difficulty2 = update_BTC_diff(difficulty, b, eta, eta_star, T, T_star)
+            difficulty_BTC_new = update_BTC_diff(difficulty_BTC, b, eta, eta_star, T, T_star)
+            difficulty_BTC_new = difficulty_scale(difficulty_BTC, difficulty_BTC_new)
 
             # difficulty2 = difficulty + (10**20) 
-            #CAP_difficulty = int(int(difficulty, 16) / (total_nonce * update_freq))
-            PAC_difficulty = 1/( (eta/difficulty2) - (eta_star/difficulty) + (1/PAC_difficulty) )
+            difficulty_PAC_new = 1/( (eta/difficulty_BTC_new) - (eta_star/difficulty_BTC) + (1/difficulty_PAC) )
             # PAC_difficulty = PAC_difficulty - (10**20) 
 
-            difficulty = difficulty2
+            difficulty_PAC = difficulty_scale(difficulty_PAC, difficulty_PAC_new)
 
-            print(f"BTC difficulty update: {difficulty}")
-            print(f"reduced difficulty update: {PAC_difficulty}")
+            print(f"BTC difficulty update: {difficulty_BTC}")
+            print(f"reduced difficulty update: {difficulty_PAC}")
 
-            total_nonce = 0
             # num_miners, num_sol_miners = get_num_miners(total, ts_star, tb_star)
 
         #treat transactions as a random number
         print("DOING BTC RACE")
-        time_btc, winBlock = miningComp(num_miners, blockChain, difficulty)
+        time_btc, winBlock = miningComp(num_miners, blockChain, difficulty_BTC)
 
         print(f"DOING PAC RACE, best score: {bestSol}")
-        time_pac, winSolBlock = solComp(sol_miners, blockChain, PAC_difficulty, bestSol, time_btc)
+        time_pac, winSolBlock = solComp(sol_miners, blockChain, difficulty_PAC, bestSol, time_btc)
 
         print(f"btc: {time_btc}, pac: {time_pac}")
         if time_btc < time_pac:
@@ -219,8 +237,6 @@ def mine_blocks():
                 # print("="*30)
             # print(b)
 
-        #loop over blocks
-        total_nonce += winBlock.nonce
     pass
 
 if __name__ == '__main__':
