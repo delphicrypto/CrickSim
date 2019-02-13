@@ -119,6 +119,9 @@ def bk_initial_call(graph, k, pivot=False, visualize=False):
         if current_best < clique_size:
             current_best = clique_size
             print(f"new best: {current_best}")
+def clique_solver(graph):
+    return bron_kerbosch(set(), set(graph.keys()), set(), graph, False)
+
 
 def N(v, g):
     # for i, n_v in enumerate(g[v]):
@@ -126,41 +129,41 @@ def N(v, g):
     #print("{}->{}".format(v,[n_v for i, n_v in enumerate(g[v]) if n_v]))
 
     return [n_v for i, n_v in enumerate(g[v]) if n_v]
-test_graph = {
-    1 : [2,5],
-    2 : [1,3,5],
-    3 : [2,4],
-    4 : [3,5,6],
-    5 : [1,2,4],
-    6 : [4]
-}
-frucht = {
-    1 : [12,2,3],
-    2 : [1,3,11],
-    3 : [1,2, 4],
-    4 : [3,5,6],
-    5 : [4,6,10],
-    6 : [4,5,7],
-    7 : [6,8,9],
-    8 : [7,9,10],
-    9 : [7,8,12],
-    10 : [5,8,11],
-    11 : [2,10,12],
-    12 : [1,9,11]
-}
+# test_graph = {
+    # 1 : [2,5],
+    # 2 : [1,3,5],
+    # 3 : [2,4],
+    # 4 : [3,5,6],
+    # 5 : [1,2,4],
+    # 6 : [4]
+# }
+# frucht = {
+    # 1 : [12,2,3],
+    # 2 : [1,3,11],
+    # 3 : [1,2, 4],
+    # 4 : [3,5,6],
+    # 5 : [4,6,10],
+    # 6 : [4,5,7],
+    # 7 : [6,8,9],
+    # 8 : [7,9,10],
+    # 9 : [7,8,12],
+    # 10 : [5,8,11],
+    # 11 : [2,10,12],
+    # 12 : [1,9,11]
+# }
 
-n_nodes = 10000
-max_deg= 5000
+# n_nodes = 10000
+# max_deg= 5000
 
-random_graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+# random_graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
 
-complete_graph_4 = {
-    1 : [5],
-    2 : [1,3,4, 5],
-    3 : [2,4, 5],
-    4 : [1, 5],
-    5 : [1, 2, 3, 4]
-}
+# complete_graph_4 = {
+    # 1 : [5],
+    # 2 : [1,3,4, 5],
+    # 3 : [2,4, 5],
+    # 4 : [1, 5],
+    # 5 : [1, 2, 3, 4]
+# }
 
 
 if __name__ == '__main__':

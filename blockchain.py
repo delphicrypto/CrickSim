@@ -1,9 +1,18 @@
+import sys
 import hashlib
 import random
 import time
 
 from mnist import NN_optimize
 from mnist import param_update 
+from clique import clique_solver
+
+n_nodes = 10000
+max_deg= 500
+
+print("building graph")
+graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+print("graph built")
 
 # Hashing in hexadecimal
 def BCHash(x):
@@ -13,9 +22,28 @@ def BCHash(x):
     #return ''.join(format(ord(i), 'b') for i in y)
 
 class Miner:
-    def __init__(self, best_score=0):
+    def __init__(self, best_score=0, problem='clique'):
         self.best_score = best_score
+        self.solver = clique_solver(graph)
+        self.solve_time = 0
 
+    def solHash(self, bestSol, BTC_time):
+        """
+            Solve until you beat the best.
+            Return time.
+        """
+        timeT = 0
+        score = self.best_score
+        while(score <= bestSol):
+            start = time.time()
+            clique = next(self.solver)
+            timeT += time.time() - start
+            score = len(clique)
+            if timeT > BTC_time:
+                return None, timeT
+        return score, timeT
+
+#list of miner objects
 class Block:
     def __init__(self, txs, prevHash, nonce, sol=None, score=None):
         self.txs = txs
@@ -27,9 +55,9 @@ class Block:
     def __str__(self):
         return str(self.__dict__)
 
-def createBlock(bC, txs, score = None):
+def createBlock(bC, txs, score = None, sol=None):
     pHash = BCHash(str(bC[-1]))
-    return Block(txs, pHash, 1, score = score)
+    return Block(txs, pHash, 1, sol=sol, score = score)
 
 def mine(block, difficulty):
     while(BCHash(str(block)) > difficulty):
@@ -52,39 +80,41 @@ def miningComp(num_miners, bC, difficulty):
     # print(nonceResults)
     return min(timeResults), minerResults[timeResults.index(min(timeResults))]
 
-def solHash(bestSol):
-    opter = NN_optimize({'max_iter': 10}, param_update)
-    score, timeT = next(opter)
-    while(score < bestSol):
-      score, timeadd = next(opter)
-      timeT += timeadd
-    return score, timeT
-
-#list of miner objects
-def solComp(sol_miners, bC, CAPdifficulty, bestSol):
+def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
     minerResults = []
     timeResults = []
     for miner in sol_miners:
-        #if they have a solution that already beats the best, skip optimization
-        timesol = 0
-        score = miner.best_score
+        found_sol = False
+        #if dont have a solution that already beats the best, do optimization
         if miner.best_score <= bestSol:
-            score, timesol = solHash(bestSol)
-            miner.best_score = score
+            score, timesol = miner.solHash(bestSol, BTC_time)
+            #if got improvement before BTC_time record it
+            if score:
+                miner.best_score = score
+                found_sol = True
 
-        trans = random.random()
-        cc = createBlock(bC, trans, score)
-        start = time.time()
-        mine(cc, CAPdifficulty)
-        stop = time.time() - start
-        timeResults.append(timesol+stop)
-        minerResults.append(cc)
+
+        if found_sol:
+            trans = random.random()
+            cc = createBlock(bC, trans, miner.best_score, sol=True)
+            start = time.time()
+            mine(cc, CAPdifficulty)
+            stop = time.time() - start
+
+            timeResults.append(timesol+stop)
+            minerResults.append(cc)
+        else:
+            #no solution found, set time to infinity and block to None
+            timeResults.append(sys.maxsize)
+            minerResults.append(None)
 
     return min(timeResults), minerResults[timeResults.index(min(timeResults))]
 
 def get_times(tslist, tblist):
     Tstar = sum(tslist) + sum(tblist)
+    #average solving time
     ts_star = sum(tslist) / (len(tslist) + 0.1)
+    #average btc time
     tb_star = sum(tblist) / (len(tblist) + 0.1)
     return Tstar, ts_star, tb_star
 
@@ -116,7 +146,7 @@ def mine_blocks():
     #solution advantagee - eta
     eta = 1/5
     #initial best solution
-    bestSol = 0
+    bestSol = 1
     #time lists
     tblist = []
     tslist = []
@@ -132,7 +162,7 @@ def mine_blocks():
 
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
-    while len(blockChain) < 6 * update_freq:
+    while len(blockChain) < 100 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -164,29 +194,30 @@ def mine_blocks():
             print(f"reduced difficulty update: {PAC_difficulty}")
 
             total_nonce = 0
-            num_miners, num_sol_miners = get_num_miners(total, ts_star, tb_star)
+            # num_miners, num_sol_miners = get_num_miners(total, ts_star, tb_star)
 
         #treat transactions as a random number
         print("DOING BTC RACE")
         time_btc, winBlock = miningComp(num_miners, blockChain, difficulty)
 
         print(f"DOING PAC RACE, best score: {bestSol}")
-        time_pac, winSolBlock = solComp(sol_miners, blockChain, PAC_difficulty, bestSol)
+        time_pac, winSolBlock = solComp(sol_miners, blockChain, PAC_difficulty, bestSol, time_btc)
 
         print(f"btc: {time_btc}, pac: {time_pac}")
         if time_btc < time_pac:
             blockChain.append(winBlock)
             tblist.append(time_btc)
+            print("BTC WINS")
         else:
             blockChain.append(winSolBlock)
             print("PAC WINS")
             bestSol = winSolBlock.score
             tslist.append(time_pac)
 
-        for i,b in enumerate(blockChain):
-            if not i % update_freq:
-                print("="*30)
-            print(b)
+        # for i,b in enumerate(blockChain):
+            # if not i % update_freq:
+                # print("="*30)
+            # print(b)
 
         #loop over blocks
         total_nonce += winBlock.nonce
