@@ -1,17 +1,21 @@
+import pickle
 import sys
 import hashlib
 import random
 import time
+
+import matplotlib.pyplot as plt
 
 from mnist import NN_optimize
 from mnist import param_update 
 from clique import clique_solver
 
 n_nodes = 10000
-max_deg= 5000
+max_deg= 9000
 
 print("building graph")
-graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+# graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+graph = pickle.load(open("graph.pickle", "rb"))
 print("graph built")
 
 # Hashing in hexadecimal
@@ -93,13 +97,12 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
                 miner.best_score = score
                 found_sol = True
 
-
         if found_sol:
             trans = random.random()
-            cc = createBlock(bC, trans, miner.best_score, sol=True)
             start = time.time()
-            mine(cc, CAPdifficulty)
+            cc = createBlock(bC, trans, miner.best_score, sol=True)
             stop = time.time() - start
+            mine_time = mine(cc, CAPdifficulty)
 
             timeResults.append(timesol+stop)
             minerResults.append(cc)
@@ -183,12 +186,15 @@ def mine_blocks():
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
     data = {k: [] for k in 
-        ['eta_star', 'T_star', 'score', 'sol', 'db', 'dr']}
+        ['eta_star', 'T_star', 'score', 'sol', 'db', 'dr',
+            'tb_star', 'ts_star']}
 
     eta_star = 0
+    tb_star = 0
+    ts_star = 0
     T_star = 0
 
-    while len(blockChain) < 10 * update_freq:
+    while len(blockChain) < 5 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -213,8 +219,9 @@ def mine_blocks():
             print(f"BTC difficulty updated by factor: {difficulty_BTC_new/difficulty_BTC}")
 
             difficulty_PAC_new = 1/( (eta/difficulty_BTC_new) - (eta_star/difficulty_BTC) + (1/difficulty_PAC) )
+            if difficulty_PAC_new < 0:
+                difficulty_PAC_new = difficulty_BTC_new * eta
             print(f"PAC difficulty updated by factor: {difficulty_PAC_new/difficulty_PAC}")
-            assert difficulty_PAC_new >= 0
             difficulty_PAC = difficulty_PAC_new
             difficulty_BTC = difficulty_BTC_new
 
@@ -254,9 +261,12 @@ def mine_blocks():
         data['eta_star'].append(eta_star)
         data['T_star'].append(T_star)
         data['score'].append(bestSol)
+        data['tb_star'].append(tb_star)
+        data['ts_star'].append(ts_star)
 
     return data
-
 if __name__ == '__main__':
     data = mine_blocks()
+    plt.plot(data['tb_star'])
+    plt.show()
     print(data)
