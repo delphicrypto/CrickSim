@@ -110,15 +110,17 @@ def find_max_pivot(graph, P, X):
     return u
 
 
-def bk_initial_call(graph, k, pivot=False, visualize=False):
+def bk_initial_call(graph,pivot=False, visualize=False):
     f = bron_kerbosch(set(), set(graph.keys()), set(), graph, pivot)
     # for clique in f:
     current_best = 0
     while True:
-        clique_size = len(next(f))
+        clique = next(f)
+        clique_size = len(clique)
         if current_best < clique_size:
             current_best = clique_size
             print(f"new best: {current_best}")
+            print(f"new best: {clique}")
 def clique_solver(graph):
     return bron_kerbosch(set(), set(graph.keys()), set(), graph, False)
 
@@ -129,41 +131,49 @@ def N(v, g):
     #print("{}->{}".format(v,[n_v for i, n_v in enumerate(g[v]) if n_v]))
 
     return [n_v for i, n_v in enumerate(g[v]) if n_v]
-# test_graph = {
-    # 1 : [2,5],
-    # 2 : [1,3,5],
-    # 3 : [2,4],
-    # 4 : [3,5,6],
-    # 5 : [1,2,4],
-    # 6 : [4]
-# }
-# frucht = {
-    # 1 : [12,2,3],
-    # 2 : [1,3,11],
-    # 3 : [1,2, 4],
-    # 4 : [3,5,6],
-    # 5 : [4,6,10],
-    # 6 : [4,5,7],
-    # 7 : [6,8,9],
-    # 8 : [7,9,10],
-    # 9 : [7,8,12],
-    # 10 : [5,8,11],
-    # 11 : [2,10,12],
-    # 12 : [1,9,11]
-# }
 
-# n_nodes = 10000
-# max_deg= 5000
 
-# random_graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+def is_clique(subgraph, check, graph):
+    test = subgraph.copy()
+    test.add(check)
+    for n in test:
+        if (test-{n}).issubset(set(graph[n])):
+            continue
+        else:
+            return False
+    return True
 
-# complete_graph_4 = {
-    # 1 : [5],
-    # 2 : [1,3,4, 5],
-    # 3 : [2,4, 5],
-    # 4 : [1, 5],
-    # 5 : [1, 2, 3, 4]
-# }
+def clique_finder(graph):
+    start = random.randint(0, len(graph))
+    nodes = list(range(1,len(graph)+1))
+    random.shuffle(nodes)
+    cur_max = 1
+    cur_cli = set()
+    for start in nodes:
+        stack = [start]
+        subgraph = {start}
+        visited = set()
+        while stack:
+            check = stack.pop()
+            visited.add(check)
+            if is_clique(subgraph, check, graph):
+                subgraph.add(check)
+            for nei in graph[check]:
+                if nei not in visited:
+                    stack.append(nei)
+            if len(subgraph) > cur_max:
+                cur_max = len(subgraph)
+                cur_cli = subgraph
+
+    return cur_max,cur_cli
+
+complete_graph_4 = {
+    1 : [5],
+    2 : [1,3,4, 5],
+    3 : [2,4, 5],
+    4 : [1, 5],
+    5 : [1, 2, 3, 4]
+}
 
 
 if __name__ == '__main__':
@@ -171,7 +181,9 @@ if __name__ == '__main__':
     # print(set(test_graph.keys()))
     # init_bkb(test_graph)
     #init_bkb(frucht, pivot=True)
-    bk_initial_call(random_graph, 5)
-    print("Pivot")
+    cl = clique_finder(complete_graph_4)
+    print(cl)
+    # bk_initial_call(random_graph, 5)
+    # print("Pivot")
 
-    # bk_initial_call(complete_graph_4, pivot=True, visualize=True)
+    bk_initial_call(complete_graph_4, pivot=True, visualize=True)
