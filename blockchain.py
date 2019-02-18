@@ -5,17 +5,19 @@ import random
 import time
 
 import matplotlib.pyplot as plt
+import networkx as nx
 
 from mnist import NN_optimize
-from mnist import param_update 
-from clique import clique_solver
+from mnist import param_update
+from clique import clique_finder_rand
 
 n_nodes = 10000
 max_deg= 9000
 
 print("building graph")
 # graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
-graph = pickle.load(open("graph.pickle", "rb"))
+graph = nx.fast_gnp_random_graph(5000, 0.8)
+# graph = pickle.load(open("graph.pickle", "rb"))
 print("graph built")
 
 # Hashing in hexadecimal
@@ -28,7 +30,7 @@ def BCHash(x):
 class Miner:
     def __init__(self, best_score=0, problem='clique'):
         self.best_score = best_score
-        self.solver = clique_solver(graph)
+        self.solver = clique_finder_rand(graph)
         self.solve_time = 0
 
     def solHash(self, bestSol, BTC_time):
@@ -163,7 +165,7 @@ def mine_blocks():
     #make it 10x easier to mine with solution initially
     difficulty_PAC = difficulty_BTC * 10
     #frequency at which difficulty is updated
-    update_freq = 20 
+    update_freq = 10
     #wanted average time to mine blocks before update in seconds
     T = update_freq
     #solution advantagee - eta
@@ -179,13 +181,13 @@ def mine_blocks():
     blockChain.append(genBlock)
 
     #initial number of miners
-    num_miners = 2
-    num_sol_miners = 2
+    num_miners = 10
+    num_sol_miners = 10
     total = num_miners + num_sol_miners
 
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
-    data = {k: [] for k in 
+    data = {k: [] for k in
         ['eta_star', 'T_star', 'score', 'sol', 'db', 'dr',
             'tb_star', 'ts_star']}
 
@@ -265,8 +267,16 @@ def mine_blocks():
         data['ts_star'].append(ts_star)
 
     return data
+def norm(d):
+    mn = min(d)
+    mx = max(d)
+    return [(x-mn) / (mx-mn) for x in d]
+
 if __name__ == '__main__':
     data = mine_blocks()
-    plt.plot(data['tb_star'])
+    plt.plot(norm(data['score']), label='score')
+    plt.plot(norm(data['db']), label='db')
+    plt.plot(norm(data['dr']), label='dr')
+    plt.legend()
     plt.show()
     print(data)

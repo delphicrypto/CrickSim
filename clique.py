@@ -1,4 +1,7 @@
+import pickle
 import random
+import numpy as np
+import networkx as nx
 DEBUG = False
 
 
@@ -143,47 +146,74 @@ def is_clique(subgraph, check, graph):
             return False
     return True
 
-def clique_finder(graph):
+def clique_finder_rand(graph,alpha=1e50):
     start = random.randint(0, len(graph))
-    nodes = list(range(1,len(graph)+1))
+    nodes = list(range(0,len(graph)))
     random.shuffle(nodes)
     cur_max = 1
     cur_cli = set()
-    for start in nodes:
+    for i, start in enumerate(nodes):
         stack = [start]
         subgraph = {start}
         visited = set()
+        k = 0
         while stack:
+            if random.random() > 1/np.exp(k/alpha):
+                print(f"breaking {k}")
+                break
+            k += 1
             check = stack.pop()
             visited.add(check)
             if is_clique(subgraph, check, graph):
                 subgraph.add(check)
-            for nei in graph[check]:
+            for nei in graph.neighbors(check):
                 if nei not in visited:
                     stack.append(nei)
             if len(subgraph) > cur_max:
                 cur_max = len(subgraph)
                 cur_cli = subgraph
+            yield cur_cli 
 
-    return cur_max,cur_cli
-
+def nx_find_cliques(graph):
+    return nx.find_cliques(graph)
 complete_graph_4 = {
-    1 : [5],
+    1 : [2, 3, 4, 5],
     2 : [1,3,4, 5],
-    3 : [2,4, 5],
-    4 : [1, 5],
+    3 : [1,2,4, 5],
+    4 : [1,2,3, 5],
     5 : [1, 2, 3, 4]
 }
 
-
 if __name__ == '__main__':
+    print("building graph")
+    n_nodes = 100
+    max_deg = 99
+    # graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
+    graph = nx.gnp_random_graph(100, 0.8)
+    # graph = pickle.load(open("graph.pickle", "rb"))
     #print(set([1,2,3,4]))
     # print(set(test_graph.keys()))
     # init_bkb(test_graph)
     #init_bkb(frucht, pivot=True)
-    cl = clique_finder(complete_graph_4)
-    print(cl)
+    cl = clique_finder(graph)
+    cur_max = 0
+    while True:
+        try:
+            m = next(cl)
+        except StopIteration:
+            break
+        if m > cur_max:
+            cur_max = m
+    print(cur_max)
+    f = nx.find_cliques(graph)
+    cur_max = 0
+    while True:
+        l = len(next(f))
+        if l > cur_max:
+            print(l)
+            cur_max = l
+    # # print(cl)
     # bk_initial_call(random_graph, 5)
     # print("Pivot")
 
-    bk_initial_call(complete_graph_4, pivot=True, visualize=True)
+    # bk_initial_call(complete_graph_4, pivot=True, visualize=True)
