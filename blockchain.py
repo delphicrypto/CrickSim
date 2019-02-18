@@ -16,7 +16,7 @@ max_deg= 9000
 
 print("building graph")
 # graph = {i: random.sample(set(list(range(n_nodes))) - {i}, random.randint(1, max_deg)) for i in range(n_nodes)}
-graph = nx.fast_gnp_random_graph(5000, 0.8)
+graph = nx.fast_gnp_random_graph(1000, 0.8)
 # graph = pickle.load(open("graph.pickle", "rb"))
 print("graph built")
 
