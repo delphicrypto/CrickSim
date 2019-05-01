@@ -65,8 +65,8 @@ def createBlock(bC, txs, score = None, sol=None):
     pHash = BCHash(str(bC[-1]))
     return Block(txs, pHash, 1, sol=sol, score = score)
 
-def mine(block, difficulty):
-    while(BCHash(str(block)) > difficulty):
+def mine(block, epsilon):
+    while(BCHash(str(block)) > epsilon):
         # print(block.nonce)
         # print(BCHash(str(block)))
         block.nonce = block.nonce + 1
@@ -140,8 +140,11 @@ def get_num_miners(total, ts_star, tb_star):
 
 def update_BTC_diff(difficulty, b, eta, eta_star, T, T_star):
     return difficulty *(
-        (b+(1-b)*eta) / (b+(1-b)*eta_star) * (T_star/T)
+        (b+(1-b)*eta_star) / (b+(1-b)*eta) * (T/T_star)
             )
+
+def update_PAC_diff(difficulty, eta, eta_star, db, db_prime):
+    return eta*db_prime - eta_star*db + difficulty
 
 def difficulty_scale(new_diff, old_diff, min_factor=1/4, max_factor=4):
     """
@@ -156,14 +159,22 @@ def difficulty_scale(new_diff, old_diff, min_factor=1/4, max_factor=4):
     else:
         return new_diff
 
+def eps_to_diff( eps ):
+    return 1/eps
+
+def diff_to_eps (diff):
+    return 1/diff
+
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
     #initial difficulty
-    difficulty_BTC = BCHash("difficulty")
-    difficulty_BTC = 1e75
+    eps_b = BCHash("difficulty")
+    eps_b = 1e75
+    db = eps_to_diff(eps_b)
     #make it 10x easier to mine with solution initially
-    difficulty_PAC = difficulty_BTC * 10
+    eps_r = eps_b * 10
+    dr = eps_to_diff(eps_r)
     #frequency at which difficulty is updated
     update_freq = 10
     #wanted average time to mine blocks before update in seconds
@@ -216,28 +227,29 @@ def mine_blocks():
             print(f"eta_star: {eta_star}")
             print(f"b: {b}")
 
-            difficulty_BTC_new = update_BTC_diff(difficulty_BTC, b, eta, eta_star, T, T_star)
-            difficulty_BTC_new = difficulty_scale(difficulty_BTC_new, difficulty_BTC)
-            print(f"BTC difficulty updated by factor: {difficulty_BTC_new/difficulty_BTC}")
+            db_prime = update_BTC_diff(db, b, eta, eta_star, T, T_star)
+            db_prime = difficulty_scale(db_prime, db)
+            print(f"BTC difficulty updated by factor: {db_prime/db}")
 
-            difficulty_PAC_new = 1/( (eta/difficulty_BTC_new) - (eta_star/difficulty_BTC) + (1/difficulty_PAC) )
-            if difficulty_PAC_new < 0:
-                difficulty_PAC_new = difficulty_BTC_new * eta
-            print(f"PAC difficulty updated by factor: {difficulty_PAC_new/difficulty_PAC}")
-            difficulty_PAC = difficulty_PAC_new
-            difficulty_BTC = difficulty_BTC_new
-
-            print(f"BTC difficulty update: {difficulty_BTC}")
-            print(f"reduced difficulty update: {difficulty_PAC}")
+            dr_prime = update_PAC_diff(dr, eta, eta_star, db, db_prime)
+            if dr_prime <= 0:
+                dr_prime = db_prime * eta
+            print(f"PAC difficulty updated by factor: {dr_prime/dr}")
+            dr = dr_prime 
+            eps_r = diff_to_eps(dr)
+            db = db_prime
+            eps_b = diff_to_eps(db)
+            print(f"BTC difficulty update: {db}")
+            print(f"reduced difficulty update: {dr}")
 
             # num_miners, num_sol_miners = get_num_miners(total, ts_star, tb_star)
 
         #treat transactions as a random number
         print("DOING BTC RACE")
-        time_btc, winBlock = miningComp(num_miners, blockChain, difficulty_BTC)
+        time_btc, winBlock = miningComp(num_miners, blockChain, eps_b)
 
         print(f"DOING PAC RACE, best score: {bestSol}")
-        time_pac, winSolBlock = solComp(sol_miners, blockChain, difficulty_PAC, bestSol, time_btc)
+        time_pac, winSolBlock = solComp(sol_miners, blockChain, eps_r, bestSol, time_btc)
 
         print(f"btc: {time_btc}, pac: {time_pac}")
         if time_btc < time_pac:
@@ -258,13 +270,14 @@ def mine_blocks():
             # print(b)
 
         #record stats
-        data['db'].append(difficulty_BTC)
-        data['dr'].append(difficulty_PAC)
+        data['db'].append(db)
+        data['dr'].append(dr)
         data['eta_star'].append(eta_star)
         data['T_star'].append(T_star)
         data['score'].append(bestSol)
         data['tb_star'].append(tb_star)
         data['ts_star'].append(ts_star)
+
 
     return data
 def norm(d):
