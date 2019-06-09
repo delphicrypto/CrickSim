@@ -6,6 +6,7 @@ import time
 
 import matplotlib.pyplot as plt
 import networkx as nx
+from tqdm import tqdm
 
 from mnist import NN_optimize
 from mnist import param_update
@@ -23,7 +24,7 @@ print("graph built")
 # Hashing in hexadecimal
 def BCHash(x):
     #check that this hash is legit..
-    y = int(hashlib.sha256(bytes(x, 'utf-8')).hexdigest(), 16)
+    y = hashlib.sha256(bytes(x, 'utf-8')).hexdigest()
     return y
     #return ''.join(format(ord(i), 'b') for i in y)
 
@@ -65,8 +66,11 @@ def createBlock(bC, txs, score = None, sol=None):
     pHash = BCHash(str(bC[-1]))
     return Block(txs, pHash, 1, sol=sol, score = score)
 
-def mine(block, epsilon):
-    while(BCHash(str(block)) > epsilon):
+def diff_check(hashed, difficulty):
+    return hashed[:difficulty] == '0' * difficulty
+
+def mine(block, difficulty):
+    while not diff_check(BCHash(str(block)), int(difficulty)):
         # print(block.nonce)
         # print(BCHash(str(block)))
         block.nonce = block.nonce + 1
@@ -74,7 +78,7 @@ def mine(block, epsilon):
 def miningComp(num_miners, bC, difficulty):
     minerResults = []
     timeResults = []
-    for i in range(num_miners):
+    for i in tqdm(range(num_miners)):
         #treat transaction as a random number
         trans = random.random()
         cc = createBlock(bC, trans)
@@ -89,7 +93,7 @@ def miningComp(num_miners, bC, difficulty):
 def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
     minerResults = []
     timeResults = []
-    for miner in sol_miners:
+    for miner in tqdm(sol_miners):
         found_sol = False
         #if dont have a solution that already beats the best, do optimization
         if miner.best_score <= bestSol:
@@ -103,8 +107,8 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
             trans = random.random()
             start = time.time()
             cc = createBlock(bC, trans, miner.best_score, sol=True)
+            mine(cc, CAPdifficulty)
             stop = time.time() - start
-            mine_time = mine(cc, CAPdifficulty)
 
             timeResults.append(timesol+stop)
             minerResults.append(cc)
@@ -113,6 +117,7 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
             timeResults.append(sys.maxsize)
             minerResults.append(None)
 
+    print(timeResults)
     return min(timeResults), minerResults[timeResults.index(min(timeResults))]
 
 def get_times(tslist, tblist):
@@ -146,7 +151,7 @@ def update_BTC_diff(difficulty, b, eta, eta_star, T, T_star):
 def update_PAC_diff(difficulty, eta, eta_star, db, db_prime):
     return eta*db_prime - eta_star*db + difficulty
 
-def difficulty_scale(new_diff, old_diff, min_factor=1/4, max_factor=4):
+def difficulty_scale(new_diff, old_diff, min_factor=1/2, max_factor=2):
     """
         Make sure difficulty not changing too hard.
 
@@ -172,15 +177,18 @@ def mine_blocks():
     eps_b = BCHash("difficulty")
     eps_b = 1e75
     db = eps_to_diff(eps_b)
+    db = 2
     #make it 10x easier to mine with solution initially
     eps_r = eps_b * 10
     dr = eps_to_diff(eps_r)
+    dr = 1
     #frequency at which difficulty is updated
     update_freq = 10
     #wanted average time to mine blocks before update in seconds
     T = update_freq
+    T = 0.01
     #solution advantagee - eta
-    eta = 1/5
+    eta = 1/2
     #initial best solution
     bestSol = 1
     #time lists
@@ -246,12 +254,11 @@ def mine_blocks():
 
         #treat transactions as a random number
         print("DOING BTC RACE")
-        time_btc, winBlock = miningComp(num_miners, blockChain, eps_b)
+        time_btc, winBlock = miningComp(num_miners, blockChain, db)
 
         print(f"DOING PAC RACE, best score: {bestSol}")
-        time_pac, winSolBlock = solComp(sol_miners, blockChain, eps_r, bestSol, time_btc)
+        time_pac, winSolBlock = solComp(sol_miners, blockChain, dr, bestSol, time_btc)
 
-        print(f"btc: {time_btc}, pac: {time_pac}")
         if time_btc < time_pac:
             blockChain.append(winBlock)
             tblist.append(time_btc)
@@ -287,9 +294,13 @@ def norm(d):
 
 if __name__ == '__main__':
     data = mine_blocks()
-    plt.plot(norm(data['score']), label='score')
-    plt.plot(norm(data['db']), label='db')
-    plt.plot(norm(data['dr']), label='dr')
+    plt.plot(data['score'], label='score')
+    plt.plot(data['db'], label='db')
+    plt.plot(data['dr'], label='dr')
     plt.legend()
     plt.show()
-    print(data)
+    plt.plot(data['T_star'], label='T_star')
+    plt.plot(data['tb_star'], label='tb_star')
+    plt.plot(data['ts_star'], label='ts_star')
+    plt.legend()
+    plt.show()
