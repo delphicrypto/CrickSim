@@ -24,7 +24,8 @@ print("graph built")
 # Hashing in hexadecimal
 def BCHash(x):
     #check that this hash is legit..
-    y = hashlib.sha256(bytes(x, 'utf-8')).hexdigest()
+    # y = hashlib.sha256(bytes(x, 'utf-8')).hexdigest()
+    y = int(hashlib.sha256(bytes(x, 'utf-8')).hexdigest(), 16)
     return y
     #return ''.join(format(ord(i), 'b') for i in y)
 
@@ -69,8 +70,9 @@ def createBlock(bC, txs, score = None, sol=None):
 def diff_check(hashed, difficulty):
     return hashed[:difficulty] == '0' * difficulty
 
-def mine(block, difficulty):
-    while not diff_check(BCHash(str(block)), int(difficulty)):
+def mine(block, epsilon):
+    # while not diff_check(BCHash(str(block)), int(difficulty)):
+    while(BCHash(str(block)) > epsilon):
         # print(block.nonce)
         # print(BCHash(str(block)))
         block.nonce = block.nonce + 1
@@ -83,7 +85,7 @@ def miningComp(num_miners, bC, difficulty):
         trans = random.random()
         cc = createBlock(bC, trans)
         start = time.time()
-        mine(cc, difficulty)
+        mine(cc, diff_to_eps(difficulty))
         stop = time.time() - start
         minerResults.append(cc)
         timeResults.append(stop)
@@ -107,7 +109,7 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
             trans = random.random()
             start = time.time()
             cc = createBlock(bC, trans, miner.best_score, sol=True)
-            mine(cc, CAPdifficulty)
+            mine(cc, diff_to_eps(CAPdifficulty))
             stop = time.time() - start
 
             timeResults.append(timesol+stop)
@@ -165,23 +167,20 @@ def difficulty_scale(new_diff, old_diff, min_factor=1/2, max_factor=2):
         return new_diff
 
 def eps_to_diff( eps ):
-    return 1/eps
+    return 1 * 10 ** 64/eps
 
 def diff_to_eps (diff):
-    return 1/diff
+    return 1 * 10 ** 64/diff
 
 def mine_blocks():
     #initialize blockchain as list
     blockChain = []
     #initial difficulty
     eps_b = BCHash("difficulty")
-    eps_b = 1e75
     db = eps_to_diff(eps_b)
-    db = 2
     #make it 10x easier to mine with solution initially
     eps_r = eps_b * 10
     dr = eps_to_diff(eps_r)
-    dr = 1
     #frequency at which difficulty is updated
     update_freq = 10
     #wanted average time to mine blocks before update in seconds
