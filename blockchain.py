@@ -103,8 +103,8 @@ def solComp(sol_miners, bC, CAPdifficulty, bestSol, BTC_time):
             trans = random.random()
             start = time.time()
             cc = createBlock(bC, trans, miner.best_score, sol=True)
-            stop = time.time() - start
             mine_time = mine(cc, CAPdifficulty)
+            stop = time.time() - start
 
             timeResults.append(timesol+stop)
             minerResults.append(cc)
@@ -170,19 +170,20 @@ def mine_blocks():
     blockChain = []
     #initial difficulty
     eps_b = BCHash("difficulty")
-    eps_b = 1e75
+    # eps_b = 2e71
     db = eps_to_diff(eps_b)
     #make it 10x easier to mine with solution initially
     eps_r = eps_b * 10
     dr = eps_to_diff(eps_r)
     #frequency at which difficulty is updated
-    update_freq = 10
+    update_freq = 5
     #wanted average time to mine blocks before update in seconds
     T = update_freq
+    T = 0.01
     #solution advantagee - eta
     eta = 1/5
     #initial best solution
-    bestSol = 1
+    bestSol = 100
     #time lists
     tblist = []
     tslist = []
@@ -192,8 +193,8 @@ def mine_blocks():
     blockChain.append(genBlock)
 
     #initial number of miners
-    num_miners = 10
-    num_sol_miners = 10
+    num_miners = 5
+    num_sol_miners = 5
     total = num_miners + num_sol_miners
 
     sol_miners = [Miner() for _ in range(num_sol_miners)]
@@ -207,7 +208,7 @@ def mine_blocks():
     ts_star = 0
     T_star = 0
 
-    while len(blockChain) < 5 * update_freq:
+    while len(blockChain) < 35 * update_freq:
         print(f"Blockhain height: {len(blockChain)}")
         #update difficulty based on nonce
         if not len(blockChain) % update_freq:
@@ -235,7 +236,7 @@ def mine_blocks():
             if dr_prime <= 0:
                 dr_prime = db_prime * eta
             print(f"PAC difficulty updated by factor: {dr_prime/dr}")
-            dr = dr_prime 
+            dr = difficulty_scale(dr_prime, dr)
             eps_r = diff_to_eps(dr)
             db = db_prime
             eps_b = diff_to_eps(db)
@@ -287,9 +288,10 @@ def norm(d):
 
 if __name__ == '__main__':
     data = mine_blocks()
-    plt.plot(norm(data['score']), label='score')
-    plt.plot(norm(data['db']), label='db')
-    plt.plot(norm(data['dr']), label='dr')
+    plt.plot(data['score'], label='score')
+    plt.show()
+    plt.plot(data['db'], label='db')
+    plt.plot(data['dr'], label='dr')
     plt.legend()
     plt.show()
     print(data)
