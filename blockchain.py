@@ -159,6 +159,7 @@ def difficulty_scale(new_diff, old_diff, min_factor=1/4, max_factor=4):
     else:
         return new_diff
 
+# figure out largest integer and put it into these functions.
 def eps_to_diff( eps ):
     return 1/eps
 
