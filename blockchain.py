@@ -9,8 +9,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 from tqdm import tqdm
 
-from mnist import NN_optimize
-from mnist import param_update
 from clique import clique_finder_rand
 
 n_nodes = 10000
@@ -200,7 +198,7 @@ def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, eta, 
 
 def mine_blocks(eps_b=None, eps_r=None, 
                 update_freq=5,
-                T=0.01, eta=1/200, best_sol=100,
+                T=0.01, eta=1/200, best_sol=0,
                 num_miners=10, num_sol_miners=5,
                 mode='v1', run_id="r0"):
     """
@@ -242,14 +240,19 @@ def mine_blocks(eps_b=None, eps_r=None,
 
     while True:
         #update difficulty based on nonce
-        if not len(block_chain) % update_freq:
-            if mode == "v1":
-                db, dr = get_new_difficulties(block_chain, tblist, tslist,
-                                              db, dr, update_freq, eta, eta_star,
-                                          T, T_star)
-            else:
-                #fill me in 
-                pass
+        if mode == "v1":
+            if not len(block_chain) % update_freq:
+                db, dr = get_new_difficulties(block_chain, tblist, tslist, db, dr, update_freq, eta, eta_star, T, T_star)
+                tslist = []
+                tblist = []
+        elif mode == 'v2':
+            if not len(tslist) % update_freq and len(tslist) != 0:
+                dr = difficulty_scale(dr * T / sum(tslist), dr)
+                tslist = []
+            if not len(tblist) % update_freq and len(tblist) != 0:
+                db = difficulty_scale(db * T / sum(tblist), db)
+                tblist = []
+
         #treat transactions as a random number
         print("DOING BTC RACE")
         time_btc, winBlock = miningComp(num_miners, block_chain, db)
@@ -272,14 +275,17 @@ def mine_blocks(eps_b=None, eps_r=None,
             d[m] = locals()[m]
         yield d
 
-def simulation(**params):
-    for state in mine_blocks(**params):
-        print(state)
+def simulation(max_height, **params):
+    height = 0
+    mining = mine_blocks(**params)
+    while height < max_height:
+        state = next(mining)
+        height +=1
 
 if __name__ == '__main__':
-    simulation()
+    simulation(200, mode = 'v1')
     sys.exit()
-    data = mine_blocks(num_sol_miners=5, num_miners=5,max_height=200 )
+    data = mine_blocks(num_sol_miners=5, num_miners=5 )
 
     fig = plt.figure()
     ax = fig.add_subplot(2, 1, 1)
