@@ -246,7 +246,7 @@ def mine_blocks(eps_b=None, eps_r=None,
                 tslist = []
                 tblist = []
         elif mode == 'v2':
-            if not len(tslist) % update_freq and len(tslist) != 0:
+            if not len(tslist) % 1 and len(tslist) != 0:
                 dr = difficulty_scale(dr * (T * update_freq)/ sum(tslist), dr)
                 tslist = []
                 print(">>> DR UPDATE")
@@ -272,6 +272,7 @@ def mine_blocks(eps_b=None, eps_r=None,
             best_sol = winSolBlock.score
             tslist.append(time_pac)
 
+        block_height += 1
         d = {}
         for m in metrics:
             d[m] = locals()[m]
@@ -280,12 +281,24 @@ def mine_blocks(eps_b=None, eps_r=None,
 def simulation(max_height, **params):
     height = 0
     mining = mine_blocks(**params)
+    states = []
     while height < max_height:
         state = next(mining)
+        states.append(state)
+        print(state)
         height +=1
+            
+    return states
 
+def plotter(states, *args):
+    for a in args:
+        plt.plot([s[a] for s in states], label=a)
+    plt.legend()
+    plt.show()
 if __name__ == '__main__':
-    simulation(100, mode = 'v2')
+    data = simulation(250, mode = 'v2')
+    pickle.dump(data, open("Data/1000_blocks_v2.p", "wb"))
+    plotter(data, 'dr', 'db')
     sys.exit()
     data = mine_blocks(num_sol_miners=5, num_miners=5 )
 
