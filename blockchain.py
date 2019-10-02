@@ -198,7 +198,7 @@ def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, eta, 
 
 def mine_blocks(eps_b=None, eps_r=None, 
                 update_freq=5,
-                T=0.01, eta=1/200, best_sol=0,
+                T=0.01, eta=1/200, best_sol=200,
                 num_miners=10, num_sol_miners=5,
                 mode='v1', run_id="r0"):
     """
@@ -283,8 +283,8 @@ def simulation(max_height, **params):
         height +=1
 
 if __name__ == '__main__':
-    simulation(200, mode = 'v1')
-    sys.exit()
+    simulation(200, mode = 'v2')
+    # sys.exit()
     data = mine_blocks(num_sol_miners=5, num_miners=5 )
 
     fig = plt.figure()
