@@ -79,7 +79,8 @@ def mine(block, epsilon):
 def miningComp(num_miners, bC, difficulty):
     minerResults = []
     timeResults = []
-    for i in tqdm(range(num_miners)):
+    # for i in tqdm(range(num_miners)):
+    for i in range(num_miners):
         #treat transaction as a random number
         trans = random.random()
         cc = createBlock(bC, trans)
@@ -94,7 +95,8 @@ def miningComp(num_miners, bC, difficulty):
 def solComp(sol_miners, bC, CAPdifficulty, best_sol, BTC_time):
     minerResults = []
     timeResults = []
-    for miner in tqdm(sol_miners):
+    # for miner in tqdm(sol_miners):
+    for miner in sol_miners:
         found_sol = False
         #if dont have a solution that already beats the best, do optimization
         if miner.best_score <= best_sol:
@@ -152,14 +154,14 @@ def update_BTC_diff(difficulty, b, eta, eta_star, T, T_star):
 def update_PAC_diff(difficulty, eta, eta_star, db, db_prime):
     return eta*db_prime - eta_star*db + difficulty
 
-def difficulty_scale(new_diff, old_diff, min_factor=1/2, max_factor=2):
+def difficulty_scale(new_diff, old_diff, max_factor=2):
     """
         Make sure difficulty not changing too hard.
 
     """
     ratio = new_diff / old_diff
-    if ratio < min_factor:
-        return old_diff * min_factor
+    if ratio < 1/max_factor:
+        return old_diff * (1/max_factor)
     elif ratio > max_factor:
         return old_diff * max_factor
     else:
@@ -172,7 +174,8 @@ def eps_to_diff( eps ):
 def diff_to_eps (diff):
     return 1 * 10 ** 64/diff
 
-def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, eta, eta_star, T, T_star):
+def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, 
+                        eta, eta_star, T, T_star, max_factor=2):
         num_btc_blocks = len([b for b in block_chain[-update_freq:] if b.score == None]) / update_freq
 
         T_star, ts_star, tb_star = get_times(tslist, tblist)
@@ -181,25 +184,26 @@ def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, eta, 
         tblist, tslist = [], []
 
         db_prime = update_BTC_diff(db, num_btc_blocks, eta, eta_star, T, T_star)
-        db_prime = difficulty_scale(db_prime, db)
-        print(f"BTC difficulty updated by factor: {db_prime/db}")
+        db_prime = difficulty_scale(db_prime, db, max_factor=max_factor)
+        print(f">>> BTC difficulty updated by factor: {db_prime/db}")
 
         dr_prime = update_PAC_diff(dr, eta, eta_star, db, db_prime)
         if dr_prime <= 0:
             dr_prime = db_prime * eta
-        dr = difficulty_scale(dr_prime, dr)
-        print(f"PAC difficulty updated by factor: {dr_prime/dr}")
+        dr = difficulty_scale(dr_prime, dr, max_factor=max_factor)
+        print(f">>> PAC difficulty updated by factor: {dr_prime/dr}")
         eps_r = diff_to_eps(dr)
         db = db_prime
         eps_b = diff_to_eps(db)
-        print(f"BTC difficulty update: {db}")
-        print(f"reduced difficulty update: {dr}")
+        print(f">>> BTC difficulty update: {db}")
+        print(f">>> reduced difficulty update: {dr}")
         return db, dr
 
-def mine_blocks(eps_b=None, eps_r=None, 
+def mine_blocks(eps_b=None, eps_r=None,
                 update_freq=5,
-                T=0.01, eta=1/200, best_sol=200,
+                T=0.01, eta=1/200, best_sol=0,
                 num_miners=10, num_sol_miners=5,
+                max_factor=10,
                 mode='v2', run_id="r0"):
     """
         Iterator over blocks.
@@ -238,22 +242,46 @@ def mine_blocks(eps_b=None, eps_r=None,
 
     eta_star, tb_star, ts_star, T_star, block_height = (0,) * 5
 
+    blocks_since_sol = 0
+    num_defacto =0
     while True:
         #update difficulty based on nonce
         if mode == "v1":
             if not len(block_chain) % update_freq:
-                db, dr = get_new_difficulties(block_chain, tblist, tslist, db, dr, update_freq, eta, eta_star, T, T_star)
+                db, dr = get_new_difficulties(block_chain, tblist, tslist, db, dr, 
+                                            update_freq, eta, eta_star, T, T_star,
+                                            max_factor=max_factor)
                 tslist = []
                 tblist = []
         elif mode == 'v2':
-            if not len(tslist) % 1 and len(tslist) != 0:
+            if not len(tslist) % update_freq and len(tslist) != 0:
                 dr = difficulty_scale(dr * (T * update_freq)/ sum(tslist), dr)
                 tslist = []
                 print(">>> DR UPDATE")
+            elif not blocks_since_sol % update_freq and blocks_since_sol != 0:
+                dr = 1/max_factor * dr
+                num_defacto += 1
+                print(">>> DR UPDATE DE FACTO")
+            else:
+                pass
+
+            #BTC UPDATE
             if not len(tblist) % update_freq and len(tblist) != 0:
-                db = difficulty_scale(db * (T * update_freq) / sum(tblist), db)
+                db = difficulty_scale(db * (T * update_freq) / sum(tblist), db,
+                                        max_factor=max_factor)
                 tblist = []
                 print(">>> DB UPDATE")
+            else:
+                pass
+        else:
+            pass
+
+        print(num_defacto, blocks_since_sol)
+        if num_defacto == 2:
+            print("BOUNCING")
+            best_sol = 0
+            sol_miners = [Miner() for _ in range(num_sol_miners)]
+            num_defacto = 0
 
         #treat transactions as a random number
         print("DOING BTC RACE")
@@ -265,11 +293,14 @@ def mine_blocks(eps_b=None, eps_r=None,
         if time_btc < time_pac:
             block_chain.append(winBlock)
             tblist.append(time_btc)
+            blocks_since_sol += 1
             print(">>> BTC WINS")
         else:
             block_chain.append(winSolBlock)
             print(">>> PAC WINS")
+            blocks_since_sol = 0
             best_sol = winSolBlock.score
+            num_defacto = 0
             tslist.append(time_pac)
 
         block_height += 1
@@ -290,15 +321,20 @@ def simulation(max_height, **params):
             
     return states
 
-def plotter(states, *args):
+def plotter(states, *args, log=False):
+    fig = plt.figure()
+    ax = fig.add_subplot(2, 1, 1)
     for a in args:
-        plt.plot([s[a] for s in states], label=a)
+        ax.plot([s[a] for s in states], label=a)
+    if log:
+        ax.set_yscale('log')
     plt.legend()
     plt.show()
 if __name__ == '__main__':
-    data = simulation(20, mode = 'v2')
+    data = simulation(100, mode = 'v2')
     pickle.dump(data, open("Data/1000_blocks_v2.p", "wb"))
-    plotter(data, 'dr', 'db')
+    plotter(data, 'dr', 'db', log=True)
+    plotter(data, 'best_sol')
     sys.exit()
     data = mine_blocks(num_sol_miners=5, num_miners=5 )
 
