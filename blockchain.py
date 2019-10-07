@@ -174,8 +174,8 @@ def eps_to_diff( eps ):
 def diff_to_eps (diff):
     return 1 * 10 ** 64/diff
 
-def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq, 
-                        eta, eta_star, T, T_star, max_factor=2):
+def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq,
+                        eta, T, max_factor=2):
         num_btc_blocks = len([b for b in block_chain[-update_freq:] if b.score == None]) / update_freq
 
         T_star, ts_star, tb_star = get_times(tslist, tblist)
@@ -197,13 +197,13 @@ def get_new_difficulties(block_chain, tslist, tblist, db, dr, update_freq,
         eps_b = diff_to_eps(db)
         print(f">>> BTC difficulty update: {db}")
         print(f">>> reduced difficulty update: {dr}")
-        return db, dr
+        return db, dr, eta_star, T_star, tb_star, ts_star
 
 def mine_blocks(eps_b=None, eps_r=None,
                 update_freq=5,
                 T=0.01, eta=1/200, best_sol=0,
                 num_miners=10, num_sol_miners=5,
-                max_factor=10,
+                max_factor=10, bounce=False,
                 mode='v2', run_id="r0"):
     """
         Iterator over blocks.
@@ -248,8 +248,10 @@ def mine_blocks(eps_b=None, eps_r=None,
         #update difficulty based on nonce
         if mode == "v1":
             if not len(block_chain) % update_freq:
-                db, dr = get_new_difficulties(block_chain, tblist, tslist, db, dr, 
-                                            update_freq, eta, eta_star, T, T_star,
+                db, dr, eta_star, T_star, tb_star, ts_star  = get_new_difficulties(
+                                            block_chain, tblist, tslist,
+                                            db, dr,
+                                            update_freq, eta, T,
                                             max_factor=max_factor)
                 tslist = []
                 tblist = []
@@ -276,8 +278,7 @@ def mine_blocks(eps_b=None, eps_r=None,
         else:
             pass
 
-        print(num_defacto, blocks_since_sol)
-        if num_defacto == 2:
+        if num_defacto == 2 and bounce:
             print("BOUNCING")
             best_sol = 0
             sol_miners = [Miner() for _ in range(num_sol_miners)]
@@ -331,7 +332,7 @@ def plotter(states, *args, log=False):
     plt.legend()
     plt.show()
 if __name__ == '__main__':
-    data = simulation(100, mode = 'v2')
+    data = simulation(30, mode = 'v1', bounce=False)
     pickle.dump(data, open("Data/1000_blocks_v2.p", "wb"))
     plotter(data, 'dr', 'db', log=True)
     plotter(data, 'best_sol')
