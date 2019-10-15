@@ -3,6 +3,7 @@ import logging
 import sys
 import hashlib
 import random
+from collections import defaultdict
 import time
 
 import matplotlib.pyplot as plt
@@ -19,6 +20,19 @@ print("building graph")
 graph = nx.fast_gnp_random_graph(1000, 0.8)
 # graph = pickle.load(open("graph.pickle", "rb"))
 print("graph built")
+
+def animate(i):
+    graph_data = open('data.txt','r').read()
+    lines = graph_data.split('\n')
+    xs = []
+    ys = []
+    for line in lines:
+        if len(line) > 1:
+            x, y = line.split(',')
+            xs.append(float(x))
+            ys.append(float(y))
+    ax1.clear()
+    ax1.plot(xs, ys)
 
 # Hashing in hexadecimal
 def BCHash(x):
@@ -200,7 +214,10 @@ def mine_blocks(eps_b=None, eps_r=None,
                 T=0.01, eta=1/10, best_sol=0,
                 num_miners=10, num_sol_miners=5,
                 max_factor=10, bounce=False,
-                mode='v2', run_id="r0"):
+                mode='v2', run_id="r0",
+                btc_miner_schedule=None,
+                pac_miner_schedule=None,
+                verbose=True):
     """
         Iterator over blocks.
 
@@ -210,7 +227,7 @@ def mine_blocks(eps_b=None, eps_r=None,
     metrics = ['eta_star', 'T_star', 'best_sol',
              'db', 'dr',
              'tb_star', 'ts_star', 'block_height',
-             'T']
+             'T', 'sol_blocks', 'btc_blocks']
 
     #initialize blockchain as list
     block_chain = []
@@ -235,13 +252,43 @@ def mine_blocks(eps_b=None, eps_r=None,
     #initial number of miners
     total = num_miners + num_sol_miners
 
+    #count number of blocks for each type
+    sol_blocks, btc_blocks = (0,0)
+
     sol_miners = [Miner() for _ in range(num_sol_miners)]
 
     eta_star, tb_star, ts_star, T_star, block_height = (0,) * 5
 
     blocks_since_sol = 0
     num_defacto =0
+
+    do_pac_sched = not pac_miner_schedule is None
+    do_btc_sched = not btc_miner_schedule is None
+
+    if do_btc_sched:
+        btc_update_todo, btc_update_todo_num = next(btc_miner_schedule)
+    if do_pac_sched:
+        pac_update_todo, pac_update_todo_num = next(pac_miner_schedule)
+
     while True:
+
+        #update number of miners
+        if do_btc_sched and block_height == btc_update_todo:
+            num_miners = btc_update_todo_num
+            btc_update_todo, btc_update_todo_num = next(btc_miner_schedule)
+        if do_pac_sched and block_height == pac_update_todo:
+            if num_sol_miners < pac_update_todo_num:
+                print(">>> Adding SOL miners")
+                sol_miners.extend([Miner()] * (pac_update_todo_num - num_sol_miners))
+            elif num_sol_miners > pac_update_todo_num:
+                print(">>> Removing SOL miners")
+                sol_miners = sol_miners[:pac_update_todo_num]
+                pac_update_todo, pac_update_todo_num = next(pac_miner_schedule)
+            else:
+                pass
+
+            num_sol_miners = len(sol_miners)
+
         print(f"tblist {tblist}")
         print(f"tslist {tslist}")
         #update difficulty based on nonce
@@ -277,7 +324,7 @@ def mine_blocks(eps_b=None, eps_r=None,
         else:
             pass
 
-        v1_bounce = (mode == 'v1' and blocks_since_sol > 30) and bounce
+        v1_bounce = (mode == 'v1' and blocks_since_sol > 100) and bounce
         v2_bounce = (mode == 'v2' and num_defacto == 2) and bounce
         if v1_bounce or v2_bounce:
             print("BOUNCING")
@@ -296,10 +343,12 @@ def mine_blocks(eps_b=None, eps_r=None,
             block_chain.append(winBlock)
             tblist.append(time_btc)
             blocks_since_sol += 1
+            btc_blocks += 1
             print(">>> BTC WINS")
         else:
             block_chain.append(winSolBlock)
             print(">>> PAC WINS")
+            sol_blocks += 1
             blocks_since_sol = 0
             best_sol = winSolBlock.score
             num_defacto = 0
@@ -314,11 +363,12 @@ def mine_blocks(eps_b=None, eps_r=None,
 def simulation(max_height, **params):
     height = 0
     mining = mine_blocks(**params)
-    states = []
+    states = defaultdict(list)
     while height < max_height:
         state = next(mining)
-        states.append(state)
-        print(state)
+        states['height'].append(height)
+        for k, v in state.items():
+            states[k].append(v)
         height +=1
             
     return states
@@ -336,11 +386,14 @@ def plotter(states, *args, show=False, save=None, log=False):
     if show:
         plt.show()
 if __name__ == '__main__':
-    data = simulation(500, eta=1/200, mode = 'v1', bounce=True, update_freq=10)
+    # data = simulation(500, eta=1/200, mode = 'v2', bounce=False, update_freq=10,
+                        # pac_miner_schedule=iter([(50, 200)]))
+    data = simulation(100, eta=1/200, mode = 'v2', bounce=False, update_freq=10)
     pickle.dump(data, open("Data/1000_blocks_v2.p", "wb"))
     plotter(data, 'dr', 'db', log=True, show=False, save="v1.pdf")
     plotter(data, 'best_sol', log=False, show=False, save="v1_scores.pdf")
     plotter(data, 'T_star', 'T', log=False, show=False, save="v1_T.pdf")
+    plotter(data, 'sol_blocks', 'btc_blocks', log=False, show=False, save="v1_solblocks.pdf")
     sys.exit()
     data = mine_blocks(num_sol_miners=5, num_miners=5 )
 
